@@ -12,4 +12,3 @@ management:
   tracing:
     propagation:
       type: b3
-

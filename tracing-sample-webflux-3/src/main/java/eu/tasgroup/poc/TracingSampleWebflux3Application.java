@@ -1,5 +1,6 @@
 package eu.tasgroup.poc;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,6 +14,7 @@ import io.micrometer.context.ContextSnapshot;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.contextpropagation.ObservationThreadLocalAccessor;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Hooks;
@@ -33,7 +35,14 @@ public class TracingSampleWebflux3Application {
 		SpringApplication.run(TracingSampleWebflux3Application.class, args);
 	}
 
-	@Bean
+	@Autowired ObservationRegistry observationRegistry;
+
+	@PostConstruct
+	void setup() {
+		ObservationThreadLocalAccessor.getInstance().setObservationRegistry(observationRegistry);
+	}
+
+//	@Bean
 	ApplicationRunner applicationRunner(WebClient webClient, ObservationRegistry observationRegistry) {
 		return (args) -> {
 			log.info("Start!");
@@ -54,12 +63,13 @@ public class TracingSampleWebflux3Application {
 	}
 
 	// THIS REPLICATES THE ISSUE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//	@Bean
+	@Bean
 	ApplicationRunner applicationRunner2(WebClient webClient, ObservationRegistry observationRegistry) {
 		return (args) -> {
 			log.info("Start!");
 			Observation server = Observation.start("http.server.requests", observationRegistry);
 			server.observe(() -> {
+				log.info("In scope");
 				webClient.get().uri("https://httpbin.org/get").retrieve().bodyToMono(String.class)
 						.contextCapture().block();
 			});
